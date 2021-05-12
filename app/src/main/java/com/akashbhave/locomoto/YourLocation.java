@@ -84,104 +84,179 @@ public class YourLocation extends FragmentActivity implements OnMapReadyCallback
         protected Void doInBackground(final String... params) {
             if (downloadTaskType.equals("request")) {
                 try {
-                    final CloudGeoPoint riderLocation = new CloudGeoPoint(usersCurrentLocation.getLatitude(), usersCurrentLocation.getLongitude());
-                    final String[] reqActualName = new String[1];
 
-                    // Saves the requester's actual name
-                    CloudQuery actualNameObject = new CloudQuery("User");
-                    actualNameObject.equalTo("username", sharedPreferences.getString("currentUser", ""));
-                    actualNameObject.find(new CloudObjectArrayCallback() {
-                        @Override
-                        public void done(CloudObject[] x, CloudException t) throws CloudException {
-                            if (x != null) {
-                                for (CloudObject object : x) {
-                                    reqActualName[0] = object.getString("actualName");
+                    final String email = etEmail.getText().toString().trim();
+                    final String password = etPassword.getText().toString();
+                    user.setEmail(email);
+                    user.setPassword(password);
+                    final String jsonBody = user.toString();
+
+                    StringRequest loginRequest = new StringRequest(Method.POST, getResources().getString(R.string.create_request_url),
+                            new Response.Listener<String>()
+                            {
+                                @Override
+                                public void onResponse(String response)
+                                {
+                                    try{
+                                        final JSONObject jsonResponse = new JSONObject(response);
+                                        boolean success = jsonResponse.getBoolean("success");
+                                        if (success) {
+                                            Log.i("Rider's Location", "Saved");
+                                            Log.i("Rider Requester", "Saved");
+                                            resultGood = true;
+                                            requestActive = true;
+                                        } else {
+                                            Toast.makeText(getApplicationContext(), "Request Failed", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            } else {
-                                t.printStackTrace();
-                            }
-                        }
-                    });
-
-                    CloudObject requestsObject = new CloudObject("Requests");
-                    requestsObject.set("reqUsername", sharedPreferences.getString("currentUser", ""));
-                    requestsObject.set("reqLocation", riderLocation);
-                    requestsObject.set("reqActualName", reqActualName[0]);
-                    requestsObject.save(new CloudObjectCallback() {
+                            }, new Response.ErrorListener()
+                    {
                         @Override
-                        public void done(CloudObject x, CloudException t) throws CloudException {
-                            Log.i("Rider's Location", "Saved");
-                            Log.i("Rider Requester", "Saved");
-                            resultGood = true;
-                            requestActive = true;
+                        public void onErrorResponse(VolleyError error) {
+                            // error
+                            Snackbar.make(v, "Couldn't connect to internet"+error.getMessage(),Snackbar.LENGTH_SHORT).show();
                         }
-                    });
+                    }
+                    ) {
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json; charset=utf-8";
+                        }
+                        @Override
+                        public byte[] getBody() throws AuthFailureError {
+                            return jsonBody == null ? null : jsonBody.getBytes();
+                        }
 
-                } catch (CloudException e) {
-                    e.printStackTrace();
-                }
+                        @Override
+                        protected Map<String, String> getParams()
+                        {
+                            Map<String, String>  params = new HashMap<String, String>();
+                            params.put("email", email);
+                            params.put("password", password);
+
+                            return params;
+                        }
+
+                    };
+                    queue.add(loginRequest);
+
 
 
             } else if (downloadTaskType.equals("cancelRequest")) {
                 try {
-                    // See who gave the request
-                    CloudQuery userQuery = new CloudQuery("Requests");
-                    Log.d("Cancel Request", "Executed");
-                    userQuery.equalTo("reqUsername", sharedPreferences.getString("currentUser", ""));
-                    userQuery.find(new CloudObjectArrayCallback() {
-                        @Override
-                        public void done(CloudObject[] x, CloudException t) throws CloudException {
-                            if (x != null) {
-                                for (CloudObject object : x) {
-                                    object.delete(new CloudObjectCallback() {
-                                        @Override
-                                        public void done(CloudObject x, CloudException t) throws CloudException {
-                                            if (x != null) {
-                                                Log.i("Request", "Deleted");
-                                                resultGood = true;
-                                            } else {
-                                                t.printStackTrace();
-                                            }
+
+
+                    StringRequest loginRequest = new StringRequest(Method.POST, getResources().getString(R.string.delete_request_url),
+                            new Response.Listener<String>()
+                            {
+                                @Override
+                                public void onResponse(String response)
+                                {
+                                    try{
+                                        final JSONObject jsonResponse = new JSONObject(response);
+                                        boolean success = jsonResponse.getBoolean("success");
+                                        if (success) {
+                                            Log.i("Request", "Deleted");
+                                            resultGood = true;
+                                        } else {
+                                            Toast.makeText(getApplicationContext(), "Request Failed", Toast.LENGTH_SHORT).show();
                                         }
-                                    });
+                                    }catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            } else {
-                                t.printStackTrace();
-                            }
+                            }, new Response.ErrorListener()
+                    {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // error
+                            Snackbar.make(v, "Couldn't connect to internet"+error.getMessage(),Snackbar.LENGTH_SHORT).show();
                         }
-                    });
-                } catch (CloudException e) {
-                    e.printStackTrace();
-                }
+                    }
+                    ) {
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json; charset=utf-8";
+                        }
+                        @Override
+                        public byte[] getBody() throws AuthFailureError {
+                            return jsonBody == null ? null : jsonBody.getBytes();
+                        }
+
+                        @Override
+                        protected Map<String, String> getParams()
+                        {
+                            Map<String, String>  params = new HashMap<String, String>();
+                            params.put("email", email);
+                            params.put("password", password);
+
+                            return params;
+                        }
+
+                    };
+                    queue.add(loginRequest);
 
 
             } else if (downloadTaskType.equals("saveLocation")) {
                 try {
-                    final CloudGeoPoint riderLocation = new CloudGeoPoint(usersCurrentLocation.getLatitude(), usersCurrentLocation.getLongitude());
-                    final String[] driverUsername = {""};
-                    // Updates the user's location
-                    CloudQuery userQuery = new CloudQuery("Requests");
-                    userQuery.equalTo("reqUsername", sharedPreferences.getString("currentUser", ""));
-                    userQuery.find(new CloudObjectArrayCallback() {
-                        @Override
-                        public void done(CloudObject[] x, CloudException t) throws CloudException {
-                            if (x != null) {
-                                for (CloudObject object : x) {
-                                    driverUsername[0] = object.getString("driverUsername");
-                                    object.set("reqLocation", riderLocation);
-                                    object.save(new CloudObjectCallback() {
-                                        @Override
-                                        public void done(CloudObject x, CloudException t) throws CloudException {
+
+//                    usersCurrentLocation.getLatitude(), usersCurrentLocation.getLongitude()
+
+
+
+                    StringRequest loginRequest = new StringRequest(Method.POST, getResources().getString(R.string.save_location_url),
+                            new Response.Listener<String>()
+                            {
+                                @Override
+                                public void onResponse(String response)
+                                {
+                                    try{
+                                        final JSONObject jsonResponse = new JSONObject(response);
+                                        boolean success = jsonResponse.getBoolean("success");
+                                        if (success) {
                                             Log.i("Rider's Location", "Saved");
                                             resultGood = true;
+                                        } else {
+                                            Toast.makeText(getApplicationContext(), "Request Failed", Toast.LENGTH_SHORT).show();
                                         }
-                                    });
+                                    }catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            } else {
-                                t.printStackTrace();
-                            }
+                            }, new Response.ErrorListener()
+                    {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // error
+                            Snackbar.make(v, "Couldn't connect to internet"+error.getMessage(),Snackbar.LENGTH_SHORT).show();
                         }
-                    });
+                    }
+                    ) {
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json; charset=utf-8";
+                        }
+                        @Override
+                        public byte[] getBody() throws AuthFailureError {
+                            return jsonBody == null ? null : jsonBody.getBytes();
+                        }
+
+                        @Override
+                        protected Map<String, String> getParams()
+                        {
+                            Map<String, String>  params = new HashMap<String, String>();
+                            params.put("email", email);
+                            params.put("password", password);
+
+                            return params;
+                        }
+
+                    };
+                    queue.add(loginRequest);
+
 
                     // Updates the driver's location
                     CloudQuery driverQuery = new CloudQuery("User");

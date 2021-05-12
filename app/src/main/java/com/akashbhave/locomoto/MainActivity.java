@@ -51,31 +51,79 @@ public class MainActivity extends AppCompatActivity {
         protected Void doInBackground(String... params) {
             try {
                 if(roleSelected) {
-                    CloudUser aUser = new CloudUser();
-                    // Creates a random id/username for each user
-                    final String id = UUID.randomUUID().toString().replaceAll("-", "");
-                    aUser.set("username", id);
-                    aUser.set("password", "pass");
-                    aUser.set("email", "");
-                    aUser.set("role", userRole);
-                    System.out.println(userRole);
-                    aUser.set("actualName", userName);
-                    aUser.signUp(new CloudUserCallback() {
-                        @Override
-                        public void done(CloudUser user, CloudException e) throws CloudException {
-                            if (e == null) {
-                                Log.i("User Sign In", "Role: " + userRole);
+                    final String name = etName.getText().toString().trim();
+                    final String email = etEmail.getText().toString().trim();
+                    final int usertype_id = usertypeSpinner.getSelectedItemPosition()+1;
+                    final String password = etPassword.getText().toString();
+                    user.setFirstname(name);
+                    user.setEmail(email);
+                    user.setPassword(password);
+                    final String jsonBody = user.toString();
 
-                                // Puts in a SharedPreferences that user has already logged in
-                                sharedPreferences.edit().putBoolean("isUserIn", true).apply();
-                                sharedPreferences.edit().putString("role", userRole).apply();
-                                sharedPreferences.edit().putString("currentUser", id).apply();
-                                redirectUser();
-                            } else {
-                                e.printStackTrace();
-                            }
+                    StringRequest registerRequest = new StringRequest(Request.Method.POST, getResources().getString(R.string.Uber_Register_url),
+                            new Response.Listener<String>()
+                            {
+                                @Override
+                                public void onResponse(String response)
+                                {
+
+                                    try{
+                                        JSONObject jsonResponse = new JSONObject(response);
+                                        boolean success = jsonResponse.getBoolean("success");
+
+                                        if (success) {
+
+
+                                            Toast.makeText(getApplicationContext(), "Register Successful " + email, Toast.LENGTH_SHORT).show();
+                                            Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+//
+                                            sharedPreferences.edit().putBoolean("isUserIn", true).apply();
+                                            sharedPreferences.edit().putString("role", userRole).apply();
+                                            sharedPreferences.edit().putString("currentUser", id).apply();
+                                            redirectUser();
+                                        } else {
+
+                                            Toast.makeText(getApplicationContext(), "Register Failed", Toast.LENGTH_SHORT).show();
+
+                                        }
+                                    }catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                }
+                            }, new Response.ErrorListener()
+                    {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // error
+
+                            Snackbar.make(v, "Couldn't connect to internet",Snackbar.LENGTH_SHORT).show();
                         }
-                    });
+                    }
+                    ){
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json; charset=utf-8";
+                        }
+                        @Override
+                        public byte[] getBody() throws AuthFailureError {
+                            return jsonBody == null ? null : jsonBody.getBytes();
+                        }
+                        @Override
+                        protected Map<String, String> getParams()
+                        {
+                            Map<String, String>  params = new HashMap<String, String>();
+                            params.put("email", email);
+                            params.put("password", password);
+                            params.put("name", name);
+                            params.put("usertype_id", usertype_id+"");
+
+                            return params;
+                        }
+
+                    };
+                    queue.add(registerRequest);
+
                 } else {
                     toastMessage = "Please select a role";
                 }
